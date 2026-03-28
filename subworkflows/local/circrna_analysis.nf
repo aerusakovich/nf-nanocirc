@@ -19,7 +19,8 @@ include { CIRCRNA_EXON_MERGE     } from '../../modules/local/circrna_exon_merge'
 workflow CIRCRNA_ANALYSIS {
 
     take:
-    ch_fastq              // channel: [ val(meta), path(fastq) ]
+    ch_fastq              // channel: [ val(meta), path(fastq) ]      — unzipped, for isocirc/circfl/cirilong
+    ch_fastq_gz           // channel: [ val(meta), path(fastq.gz) ]   — gzipped, for circnick
     fasta                 // path:    reference genome FASTA
     gtf                   // path:    gene annotation GTF
     circrna_db            // path:    circRNA database (isocirc + ciri-long)
@@ -46,8 +47,10 @@ workflow CIRCRNA_ANALYSIS {
         ch_versions   = ch_versions.mix(CIRCFL_SEQ.out.versions.first())
     }
 
-    // PREPARE_GENOME: copy FASTA + build BWA/fai indices once (cached via storeDir)
-    // CIRI-long → runs per sample using real genome.fa (not symlink) → BED12
+    // CIRI-long: PREPARE_GENOME copies FASTA and builds/copies BWA index once.
+    // The script checks if index files already exist next to the source FASTA
+    // and copies them instead of rebuilding (fast path).
+    // storeDir caches results so subsequent runs skip this entirely.
     ch_cirilong_bed = Channel.empty()
     if (params.run_cirilong) {
         PREPARE_GENOME ( fasta )
@@ -65,10 +68,10 @@ workflow CIRCRNA_ANALYSIS {
         ch_versions     = ch_versions.mix(CIRILONG_TO_BED12.out.versions.first())
     }
 
-    // circnick-lrs → optional liftover → convert to BED12
+    // circnick-lrs uses .fastq.gz input → optional liftover → convert to BED12
     ch_circnick_bed = Channel.empty()
     if (params.run_circnick) {
-        CIRCNICK_LRS ( ch_fastq, params.circnick_species )
+        CIRCNICK_LRS ( ch_fastq_gz, params.circnick_species )
         ch_versions = ch_versions.mix(CIRCNICK_LRS.out.versions.first())
 
         if (params.circnick_liftover_chain) {

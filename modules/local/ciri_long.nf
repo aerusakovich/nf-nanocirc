@@ -30,6 +30,9 @@ process CIRI_LONG {
     """
     mkdir -p ${out}
 
+    # fasta is genome.fa — a real file (not symlink) from PREPARE_GENOME.
+    # Index files (genome.fa.*) are staged alongside it in the work directory.
+    # bwapy will find the index correctly without any additional copying.
     CIRI-long call \\
         -i ${fastq} \\
         -o ${out} \\

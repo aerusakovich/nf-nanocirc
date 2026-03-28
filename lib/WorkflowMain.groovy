@@ -3,7 +3,20 @@
 //
 
 class WorkflowMain {
-    
+
+    //
+    // Citation string for pipeline
+    //
+    public static String citation(workflow) {
+        return "If you use ${workflow.manifest.name} for your analysis please cite:\n\n" +
+            "* The pipeline\n" +
+            "  https://github.com/aerusakovich/nf-nanocirc\n\n" +
+            "* The nf-core framework\n" +
+            "  https://doi.org/10.1038/s41587-020-0439-x\n\n" +
+            "* Software dependencies\n" +
+            "  https://github.com/${workflow.manifest.name}/blob/master/CITATIONS.md"
+    }
+
     //
     // Generate help string
     //
