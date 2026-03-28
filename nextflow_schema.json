@@ -1,0 +1,296 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema",
+    "$id": "https://raw.githubusercontent.com/aerusakovich/nanocirc/master/nextflow_schema.json",
+    "title": "nanocirc pipeline parameters",
+    "description": "Long-read circRNA detection and analysis pipeline",
+    "type": "object",
+    "definitions": {
+        "input_output_options": {
+            "title": "Input/output options",
+            "type": "object",
+            "fa_icon": "fas fa-terminal",
+            "description": "Define where the pipeline should find input data and save output data.",
+            "properties": {
+                "input": {
+                    "type": "string",
+                    "format": "file-path",
+                    "description": "Path to samplesheet CSV with columns: sample, fastq",
+                    "fa_icon": "fas fa-file-csv"
+                },
+                "outdir": {
+                    "type": "string",
+                    "description": "Output directory for results",
+                    "default": "results",
+                    "fa_icon": "fas fa-folder-open"
+                }
+            }
+        },
+        "reference_options": {
+            "title": "Reference options",
+            "type": "object",
+            "description": "Reference genome and annotation files",
+            "properties": {
+                "fasta": {
+                    "type": "string",
+                    "format": "file-path",
+                    "description": "Reference genome FASTA",
+                    "fa_icon": "fas fa-dna"
+                },
+                "gtf": {
+                    "type": "string",
+                    "format": "file-path",
+                    "description": "Gene annotation GTF",
+                    "fa_icon": "fas fa-file-alt"
+                },
+                "circrna_db": {
+                    "type": "string",
+                    "format": "file-path",
+                    "description": "circRNA database BED file (required for isocirc and ciri-long)",
+                    "fa_icon": "fas fa-database"
+                },
+                "genome_index_dir": {
+                    "type": "string",
+                    "description": "Directory to store/reuse genome index. Defaults to <outdir>/genome_index.",
+                    "fa_icon": "fas fa-folder"
+                }
+            }
+        },
+        "tool_options": {
+            "title": "circRNA tool options",
+            "type": "object",
+            "description": "Select which circRNA detection tools to run",
+            "properties": {
+                "run_isocirc": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Run isocirc",
+                    "fa_icon": "fas fa-play"
+                },
+                "run_circfl": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Run circFL-seq",
+                    "fa_icon": "fas fa-play"
+                },
+                "run_cirilong": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Run CIRI-long",
+                    "fa_icon": "fas fa-play"
+                },
+                "run_circnick": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Run circnick-lrs",
+                    "fa_icon": "fas fa-play"
+                },
+                "circnick_species": {
+                    "type": "string",
+                    "default": "mouse",
+                    "description": "Species for circnick-lrs: 'mouse' or 'human'",
+                    "enum": [
+                        "mouse",
+                        "human"
+                    ],
+                    "fa_icon": "fas fa-paw"
+                },
+                "circnick_liftover_chain": {
+                    "type": "string",
+                    "format": "file-path",
+                    "description": "UCSC chain file for circnick-lrs liftover (optional)",
+                    "fa_icon": "fas fa-link"
+                }
+            }
+        },
+        "merge_options": {
+            "title": "Merge and confidence options",
+            "type": "object",
+            "description": "Options for merging circRNA results and computing confidence scores",
+            "properties": {
+                "circrna_bsj_tolerance": {
+                    "type": "integer",
+                    "default": 5,
+                    "description": "BSJ coordinate tolerance in bp for relaxed merge mode",
+                    "fa_icon": "fas fa-ruler"
+                },
+                "circrna_isoform_overlap": {
+                    "type": "number",
+                    "default": 0.95,
+                    "description": "Minimum reciprocal spliced-length overlap for isoform confidence scoring",
+                    "fa_icon": "fas fa-percentage"
+                }
+            }
+        },
+        "qc_options": {
+            "title": "QC options",
+            "type": "object",
+            "description": "Options for quality control steps",
+            "properties": {
+                "skip_qc": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Skip all QC steps",
+                    "fa_icon": "fas fa-forward"
+                },
+                "skip_nanoplot": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Skip NanoPlot",
+                    "fa_icon": "fas fa-forward"
+                },
+                "skip_fastqc": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Skip FastQC",
+                    "fa_icon": "fas fa-forward"
+                },
+                "skip_multiqc": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Skip MultiQC",
+                    "fa_icon": "fas fa-forward"
+                },
+                "run_nanolyse": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Run NanoLyse for host DNA depletion",
+                    "fa_icon": "fas fa-filter"
+                },
+                "nanolyse_db": {
+                    "type": "string",
+                    "format": "file-path",
+                    "description": "NanoLyse database FASTA (required if --run_nanolyse)",
+                    "fa_icon": "fas fa-file"
+                },
+                "multiqc_config": {
+                    "type": "string",
+                    "format": "file-path",
+                    "description": "Custom MultiQC config file",
+                    "fa_icon": "fas fa-cog"
+                },
+                "multiqc_title": {
+                    "type": "string",
+                    "description": "MultiQC report title",
+                    "fa_icon": "fas fa-heading"
+                }
+            }
+        },
+        "generic_options": {
+            "title": "Generic options",
+            "type": "object",
+            "fa_icon": "fas fa-file-import",
+            "description": "Less common options for the pipeline",
+            "properties": {
+                "help": {
+                    "type": "boolean",
+                    "description": "Display help text",
+                    "fa_icon": "fas fa-question-circle",
+                    "hidden": true
+                },
+                "publish_dir_mode": {
+                    "type": "string",
+                    "default": "copy",
+                    "description": "Method used to save pipeline results to output directory",
+                    "fa_icon": "fas fa-copy",
+                    "enum": [
+                        "symlink",
+                        "rellink",
+                        "link",
+                        "copy",
+                        "copyNoFollow",
+                        "move"
+                    ],
+                    "hidden": true
+                },
+                "email": {
+                    "type": "string",
+                    "description": "Email address for completion summary",
+                    "fa_icon": "fas fa-envelope",
+                    "hidden": true
+                },
+                "email_on_fail": {
+                    "type": "string",
+                    "description": "Email address for completion summary on failure",
+                    "fa_icon": "fas fa-exclamation-triangle",
+                    "hidden": true
+                },
+                "plaintext_email": {
+                    "type": "boolean",
+                    "description": "Send plain-text email instead of HTML",
+                    "fa_icon": "fas fa-remove-format",
+                    "hidden": true
+                },
+                "monochrome_logs": {
+                    "type": "boolean",
+                    "description": "Do not use coloured log outputs",
+                    "fa_icon": "fas fa-palette",
+                    "hidden": true
+                },
+                "hook_url": {
+                    "type": "string",
+                    "description": "Incoming hook URL for messaging service",
+                    "fa_icon": "fas fa-plug",
+                    "hidden": true
+                },
+                "tracedir": {
+                    "type": "string",
+                    "description": "Directory to keep pipeline Nextflow logs and reports",
+                    "default": "${params.outdir}/pipeline_info",
+                    "fa_icon": "fas fa-cogs",
+                    "hidden": true
+                },
+                "validate_params": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Boolean whether to validate parameters against the schema at runtime",
+                    "fa_icon": "fas fa-check-square",
+                    "hidden": true
+                },
+                "show_hidden_params": {
+                    "type": "boolean",
+                    "fa_icon": "far fa-eye-slash",
+                    "description": "Show all params when using `--help`",
+                    "hidden": true
+                },
+                "max_cpus": {
+                    "type": "integer",
+                    "default": 16,
+                    "fa_icon": "fas fa-microchip",
+                    "hidden": true
+                },
+                "max_memory": {
+                    "type": "string",
+                    "default": "256.GB",
+                    "fa_icon": "fas fa-memory",
+                    "hidden": true
+                },
+                "max_time": {
+                    "type": "string",
+                    "default": "336.h",
+                    "fa_icon": "fas fa-clock",
+                    "hidden": true
+                }
+            }
+        }
+    },
+    "allOf": [
+        {
+            "$ref": "#/definitions/input_output_options"
+        },
+        {
+            "$ref": "#/definitions/reference_options"
+        },
+        {
+            "$ref": "#/definitions/tool_options"
+        },
+        {
+            "$ref": "#/definitions/merge_options"
+        },
+        {
+            "$ref": "#/definitions/qc_options"
+        },
+        {
+            "$ref": "#/definitions/generic_options"
+        }
+    ]
+}
