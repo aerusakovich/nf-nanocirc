@@ -23,7 +23,6 @@ process ISOCIRC {
     script:
     def args = task.ext.args ?: ''
     """
-    # isocirc requires C locale to handle sequence data correctly
     export LC_ALL=C
     export LANG=C
 

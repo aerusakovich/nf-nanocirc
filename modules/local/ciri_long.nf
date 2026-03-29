@@ -10,8 +10,8 @@ process CIRI_LONG {
 
     input:
     tuple val(meta), path(fastq)
-    path  fasta       // genome.fa — real file from PREPARE_GENOME (not a symlink)
-    path  index       // genome.fa.* — staged alongside fasta in work dir
+    path  fasta
+    path  index
     path  gtf
     path  circrna_db
 
@@ -30,9 +30,6 @@ process CIRI_LONG {
     """
     mkdir -p ${out}
 
-    # fasta is genome.fa — a real file (not symlink) from PREPARE_GENOME.
-    # Index files (genome.fa.*) are staged alongside it in the work directory.
-    # bwapy will find the index correctly without any additional copying.
     CIRI-long call \\
         -i ${fastq} \\
         -o ${out} \\

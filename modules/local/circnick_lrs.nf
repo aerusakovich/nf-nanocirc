@@ -10,7 +10,7 @@ process CIRCNICK_LRS {
 
     input:
     tuple val(meta), path(fastq)
-    val   species       // 'mouse' or 'human'
+    val   species
 
     output:
     tuple val(meta), path("${meta.id}_circnick/${meta.id}/${meta.id}.circRNA_candidates.annotated.txt"),                                          emit: annotated
@@ -29,9 +29,12 @@ process CIRCNICK_LRS {
     """
     mkdir -p ${out}
 
-    # circnick-lrs uses the input filename (without extension) as the output
-    # subdirectory name — use meta.id so output is always in ${out}/${meta.id}/
-    ${is_gz ? "ln -s ${fastq} ${meta.id}.fq.gz" : "gzip -c ${fastq} > ${meta.id}.fq.gz"}
+    # circnick-lrs requires gzipped input.
+    # Use meta.id as filename — circnick uses it as the output subdirectory name.
+    ${is_gz ?
+        "ln -sf ${fastq} ${meta.id}.fq.gz" :
+        "gzip -c ${fastq} > ${meta.id}.fq.gz"
+    }
 
     long_read_circRNA run \\
         --species          ${species} \\

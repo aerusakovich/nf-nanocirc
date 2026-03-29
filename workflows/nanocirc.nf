@@ -55,7 +55,7 @@ include { NANOLYSE            } from '../modules/nf-core/nanolyse/main'
 include { FASTQC              } from '../modules/nf-core/fastqc/main'
 include { NANOPLOT            } from '../modules/nf-core/nanoplot/main'
 include { MULTIQC             } from '../modules/nf-core/multiqc/main'
-include { PREPARE_READS       } from '../modules/local/prepare_reads'
+include { FASTQ_RENAME        } from '../modules/local/fastq_rename'
 include { INPUT_CHECK         } from '../subworkflows/local/input_check'
 include { CIRCRNA_ANALYSIS    } from '../subworkflows/local/circrna_analysis'
 
@@ -72,55 +72,46 @@ workflow NANOCIRC {
      */
     INPUT_CHECK ( ch_input )
 
-    /*
-     * MODULE: Normalize reads to both .fastq.gz and .fastq
-     *   - .fastq.gz : used by circnick, NanoPlot, FastQC
-     *   - .fastq    : used by isocirc, circFL-seq, CIRI-long
-     * If input is already .fastq.gz, decompression is done once here.
-     * If input is .fq/.fastq, compression is done once here.
-     * Work files are removed after the run (cleanup = true in nextflow.config).
-     */
-    PREPARE_READS ( INPUT_CHECK.out.fastq )
-    ch_fastq_gz          = PREPARE_READS.out.fastq_gz
-    ch_fastq             = PREPARE_READS.out.fastq
-    ch_software_versions = ch_software_versions.mix(PREPARE_READS.out.versions.first().ifEmpty(null))
+    // Ensure all input files are named *.fastq.gz — required by nf-core NanoPlot
+    // module which detects input type from extension. Input is already validated
+    // as .gz by INPUT_CHECK; this just standardises the filename.
+    FASTQ_RENAME ( INPUT_CHECK.out.fastq )
+    ch_fastq = FASTQ_RENAME.out.fastq
 
     /*
      * MODULE: DNA contaminant removal using NanoLyse (optional)
-     * Runs on .fastq.gz
      */
     if (params.run_nanolyse) {
         if (!params.nanolyse_db) {
             exit 1, "Parameter '--nanolyse_db' is required when '--run_nanolyse' is set."
         }
-        NANOLYSE ( ch_fastq_gz, file(params.nanolyse_db, checkIfExists: true) )
-        ch_fastq_gz          = NANOLYSE.out.fastq
+        NANOLYSE ( ch_fastq, file(params.nanolyse_db, checkIfExists: true) )
+        ch_fastq             = NANOLYSE.out.fastq
         ch_software_versions = ch_software_versions.mix(NANOLYSE.out.versions.first().ifEmpty(null))
     }
 
     /*
-     * QC: FastQC and NanoPlot — both use .fastq.gz
+     * QC: FastQC and NanoPlot — both handle .fastq.gz natively
      */
     ch_fastqc_multiqc = Channel.empty()
     if (!params.skip_qc) {
         if (!params.skip_fastqc) {
-            FASTQC ( ch_fastq_gz )
+            FASTQC ( ch_fastq )
             ch_software_versions = ch_software_versions.mix(FASTQC.out.versions.first().ifEmpty(null))
             ch_fastqc_multiqc    = FASTQC.out.zip.collect { it[1] }.ifEmpty([])
         }
         if (!params.skip_nanoplot) {
-            NANOPLOT ( ch_fastq_gz )
+            NANOPLOT ( ch_fastq )
             ch_software_versions = ch_software_versions.mix(NANOPLOT.out.versions.first().ifEmpty(null))
         }
     }
 
     /*
      * SUBWORKFLOW: circRNA detection, BED12 conversion, merge and confidence scoring
-     * Tools receive .fastq (unzipped) — circnick receives .fastq.gz internally
+     * Tools decompress inline if they require unzipped input.
      */
     CIRCRNA_ANALYSIS (
         ch_fastq,
-        ch_fastq_gz,
         file(params.fasta,       checkIfExists: true),
         file(params.gtf,         checkIfExists: true),
         params.circrna_db ? file(params.circrna_db, checkIfExists: true) : file('NO_FILE')

@@ -2,7 +2,6 @@ process CIRCFL_SEQ {
     tag "$meta.id"
     label 'process_high'
 
-    // --containall isolates the environment, --writable-tmpfs needed for temp files
     containerOptions = "--writable-tmpfs"
 
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
@@ -23,12 +22,16 @@ process CIRCFL_SEQ {
     task.ext.when == null || task.ext.when
 
     script:
-    def args = task.ext.args ?: ''
-    def out  = "${meta.id}_circfl"
+    def args  = task.ext.args ?: ''
+    def out   = "${meta.id}_circfl"
+    def is_gz = fastq.name.endsWith('.gz')
     """
     export PYTHONNOUSERSITE=1
 
-    # circfull requires a bgzip-compressed, tabix-indexed GTF sorted by position
+    # Decompress inline if needed — circfull requires plain FASTQ
+    ${is_gz ? "gunzip -c ${fastq} > input.fastq" : "ln -sf ${fastq} input.fastq"}
+
+    # Sort and index GTF
     grep "^#" ${gtf} > anno_sorted.gtf
     grep -v "^#" ${gtf} | sort -k1,1 -k4,4n >> anno_sorted.gtf
     bgzip -c anno_sorted.gtf > anno.gtf.gz
@@ -36,22 +39,19 @@ process CIRCFL_SEQ {
 
     mkdir -p ${out}
 
-    # Step 1: reference-guided detection
     circfull RG \\
-        -f ${fastq} \\
+        -f input.fastq \\
         -g ${fasta} \\
         -a anno.gtf.gz \\
         -t ${task.cpus} \\
         -r \\
         -o ${out}
 
-    # Step 2: de novo self-correction
     circfull DNSC \\
         -f ${out}/RG/circSeq.fa \\
         -t ${task.cpus} \\
         -o ${out}
 
-    # Step 3: corrected reference-guided detection
     circfull cRG \\
         -f ${out}/DNSC \\
         -g ${fasta} \\
@@ -59,21 +59,18 @@ process CIRCFL_SEQ {
         -t ${task.cpus} \\
         -o ${out}
 
-    # Step 4: merge RG and cRG results
     circfull mRG \\
-        -f ${fastq} \\
+        -f input.fastq \\
         -g ${fasta} \\
         -r ${out} \\
         -c ${out} \\
         -o ${out}
 
-    # Step 5: annotate full-length circRNAs
     circfull anno \\
         -b ${out}/mRG/circFL_Normal_pass.bed \\
         -a anno.gtf.gz \\
         -o ${out}/annotated
 
-    # Step 6: convert to BED12
     circfull FL2BED \\
         -c ${out}/mRG/circFL_Normal_pass.txt \\
         -o ${out}/circFL_final.bed
